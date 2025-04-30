@@ -24,4 +24,3 @@ uint8_t my_check_code_analysis(uint8_t * data, uint16_t len)
     }
 }
 
-
