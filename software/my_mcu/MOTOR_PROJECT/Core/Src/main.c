@@ -131,7 +131,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-		printf("Number_Of_Pulses:%d!\r\n",Motor1_Number_Of_Pulses);
+//		printf("Number_Of_Pulses:%d!\r\n",Motor1_Number_Of_Pulses);
 		HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
   }

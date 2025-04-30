@@ -247,7 +247,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim3){								    /* 判断是否为定时器TIM2 */
 		 if(ic_state[Motor_channel] == runing){					    /* 判断是否为是 正在运行状态 */
-			  printf("溢出了一次!\r\n");
+//			  printf("溢出了一次!\r\n");
 		 }
 	}
 }
