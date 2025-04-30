@@ -259,7 +259,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 	else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_3) Motor_channel = 2;
 	else if(htim->Channel == HAL_TIM_ACTIVE_CHANNEL_4) Motor_channel = 3;
 	else return;
-	IC_STATE* ch = &ic_state[Motor_channel];
+
 	if(htim == &htim3){							         /* 判断是否为定时器TIM2 */
 		if (ic_state[Motor_channel] == idle) // 正确判断状态
 		{
