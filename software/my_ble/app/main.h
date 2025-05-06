@@ -79,6 +79,8 @@
 #define DEAD_BEEF                       0xDEADBEEF     
       
 
+extern uint8_t g_AppConnectFlag;		//APP连接标志
+extern uint8_t g_AppConnectTimeCount;	//APP连接计时
 /*数据*/
 extern char sensor_ble_code[16];
 extern char sensor_password[16];

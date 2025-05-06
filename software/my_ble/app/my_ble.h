@@ -25,6 +25,7 @@ void gap_params_init(void);
 extern void my_ble_init(void);
 void my_nus_data_recv_handler_task(void);
 void my_data_analysis(uint8_t const* data, uint16_t len);
+void my_ble_disconnect(void);
 #endif
 
 

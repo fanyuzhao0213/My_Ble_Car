@@ -236,13 +236,29 @@ void uarts_data_handler(ble_uarts_evt_t * p_evt)
 	//判断事件类型:接收到新数据事件
     if (p_evt->type == BLE_UARTS_EVT_RX_DATA)
     {
-        NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
-        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
-                                nus_data_rcv_buff_len = p_evt->params.rx_data.length;
-                                memcpy(nus_data_rcv_buff[nus_data_write_p++],p_evt->params.rx_data.p_data,nus_data_rcv_buff_len);
-                                if(nus_data_write_p >= NUS_DATA_REC_BUFF_MAX)
-                                        nus_data_write_p = 0;
-                                nus_data_rcv_flag++;                                
+		g_AppConnectTimeCount = 0;
+//        NRF_LOG_DEBUG("Received data from BLE NUS. Writing data on UART.");
+//        NRF_LOG_HEXDUMP_DEBUG(p_evt->params.rx_data.p_data, p_evt->params.rx_data.length);
+//                                nus_data_rcv_buff_len = p_evt->params.rx_data.length;
+//                                memcpy(nus_data_rcv_buff[nus_data_write_p++],p_evt->params.rx_data.p_data,nus_data_rcv_buff_len);
+//                                if(nus_data_write_p >= NUS_DATA_REC_BUFF_MAX)
+//                                        nus_data_write_p = 0;
+//                                nus_data_rcv_flag++;                    
+        uint32_t err_code;
+        //串口打印出接收的数据
+		NRF_LOG_HEXDUMP_INFO(p_evt->params.rx_data.p_data,p_evt->params.rx_data.length);
+        for (uint32_t i = 0; i < p_evt->params.rx_data.length; i++)
+        {
+            do
+            {
+                err_code = app_uart_put(p_evt->params.rx_data.p_data[i]);
+                if ((err_code != NRF_SUCCESS) && (err_code != NRF_ERROR_BUSY))
+                {
+                    NRF_LOG_ERROR("Failed receiving NUS message. Error 0x%x. ", err_code);
+                    APP_ERROR_CHECK(err_code);
+                }
+            } while (err_code == NRF_ERROR_BUSY);
+        }		
                                 //Debug_LOG("*****len %d",p_evt->params.rx_data.length);
     }
 		//判断事件类型:发送就绪事件，该事件在后面的试验会用到，当前我们在该事件中翻转指示灯D4的状态，指示该事件的产生
@@ -596,6 +612,8 @@ void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = BLE_CONN_HANDLE_INVALID;    
 			//打印提示信息
 			NRF_LOG_INFO("Disconnected.");
+			g_AppConnectFlag = 0;
+			g_AppConnectTimeCount = 0;
             break;
 				
         //连接事件
@@ -604,6 +622,8 @@ void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 			//设置指示灯状态为连接状态，即指示灯D1常亮
             err_code = bsp_indication_set(BSP_INDICATE_CONNECTED);
             APP_ERROR_CHECK(err_code);
+			g_AppConnectFlag = 1;
+			g_AppConnectTimeCount = 0;
 			//保存连接句柄
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
 			NRF_LOG_INFO("BLE_GAP_EVT_CONNECTED m_conn_handle : %d",m_conn_handle);
@@ -657,6 +677,22 @@ void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 
         default:
             break;
+    }
+}
+
+void my_ble_disconnect(void)
+{
+	if(g_AppConnectFlag == 0)
+		return;	
+    // 调用断开连接的函数
+    uint32_t err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
+    if (err_code != NRF_SUCCESS)
+    {
+        NRF_LOG_WARNING("Failed to disconnect connection. Connection handle: %d Error: %d", m_conn_handle, err_code);
+    }
+    else
+    {
+        NRF_LOG_DEBUG("Disconnected connection handle %d", m_conn_handle);
     }
 }
 

@@ -82,7 +82,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
                     }
                     else
                     {
-                        ret = my_check_code_analysis(&data_array[4],rece_len-4);
+                        ret = my_check_code_analysis(&data_array[3],rece_len-3);
                         if(ret != 0){
                             rece_flag = 0;
                             rece_len =0;
@@ -91,7 +91,8 @@ void uart_event_handle(app_uart_evt_t * p_event)
                         }
 						NRF_LOG_INFO("[UART] REV MCU ID : %02x",data_array[3]);  
 						NRF_LOG_HEXDUMP_INFO(data_array,rece_len);
-                        my_ble_recv_large_cc(data_array,rece_len);//解析MCU数据
+//                        my_ble_recv_large_cc(data_array,rece_len);//解析MCU数据
+						my_ble_send(data_array,rece_len,m_conn_handle);
                         rece_flag = 0;
                         rece_len =0;
                         index = 0;

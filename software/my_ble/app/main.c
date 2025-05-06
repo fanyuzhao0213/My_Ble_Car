@@ -25,6 +25,8 @@ uint16_t   m_ble_uarts_max_data_len = BLE_GATT_ATT_MTU_DEFAULT - 3;
 
 //该变量用于保存连接句柄，初始值设置为无连接
 uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID; 
+uint8_t g_AppConnectFlag = 0;		//APP连接标志
+uint8_t g_AppConnectTimeCount = 0;	//APP连接计时
 
 //设备名称数组  中文名称：串口透传
 const char device_name[12] = {0xE4,0xB8,0xB2,0xE5,0x8F,0xA3,0xE9,0x80,0x8F,0xE4,0xBC,0xA0};
@@ -49,6 +51,28 @@ static void leds_init(void)
     APP_ERROR_CHECK(err_code);
 
 }
+
+static void my_timeout_handler (void * p_context)
+{
+	static uint32_t m_timestamp_s = 0;
+	m_timestamp_s++;
+	if(g_AppConnectFlag == 1)
+	{
+		g_AppConnectTimeCount++;
+		if(g_AppConnectTimeCount >= 15) //15S
+		{
+			NRF_LOG_INFO("[BLE] Disconnected  30S !");  
+			my_ble_disconnect();	//超时断开
+			g_AppConnectTimeCount = 0;
+			g_AppConnectFlag = 0;
+		}
+	}else
+	{
+		g_AppConnectTimeCount = 0;
+	}
+}
+
+APP_TIMER_DEF(my_timer_id); 
 //初始化APP定时器模块
 static void timers_init(void)
 {
@@ -58,7 +82,10 @@ static void timers_init(void)
     APP_ERROR_CHECK(err_code);
 
     //加入创建用户定时任务的代码，创建用户定时任务。 
-
+	err_code = app_timer_create(&my_timer_id, APP_TIMER_MODE_REPEATED, my_timeout_handler);
+	APP_ERROR_CHECK(err_code);
+	err_code = app_timer_start(my_timer_id, APP_TIMER_TICKS(1000), NULL);  //start timer 1s
+	APP_ERROR_CHECK(err_code);
 }
 static void log_init(void)
 {
