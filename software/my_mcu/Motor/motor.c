@@ -322,6 +322,116 @@ void car_turn(uint8_t turn_dir, uint8_t level)
 }
 
 
+/**
+ * @brief 计算单步PWM值（带边界保护）
+ */
+static uint16_t calculate_step_pwm(uint16_t current, uint16_t target, float ratio)
+{
+    int32_t result = current + (int32_t)(ratio * (target - current));
+    // 边界保护
+    if(target > current) {
+        return (result > target) ? target : (uint16_t)result;
+    } else {
+        return (result < target) ? target : (uint16_t)result;
+    }
+}
+
+/**
+ * @brief 通道号转数组索引
+ */
+static uint8_t channel_to_index(uint32_t channel)
+{
+    // TIM_CHANNEL_x 到 0-3 的映射
+    return (channel - TIM_CHANNEL_1); // 假设通道号是连续枚举值
+}
+
+/** 
+ * @brief 带软启动的小车转弯控制（支持前进后退转弯）
+ * @param turn_dir 转弯方向：0=左转，1=右转 
+ * @param level 转弯强度等级：0=轻微，1=中等，2=急转 
+ * @param accel_time_ms 加速时间(ms)，0=使用默认值(200ms) 
+ */ 
+void car_turn_soft(uint8_t turn_dir, uint8_t level, uint16_t accel_time_ms) 
+{ 
+    // 参数检查 
+    if( level > 3) 
+		return; 
+    
+    // 配置参数 
+    const uint16_t DEFAULT_ACCEL_TIME = 200; 
+    const uint16_t STEP_TIME = 10; 
+    const uint16_t speed_outer = 1000; // 外侧轮全速 
+    const uint16_t speed_inner_table[3] = {700, 400, 200}; 
+    
+    // 获取当前运动状态
+    uint8_t current_dir = (HAL_GPIO_ReadPin(MOTOR_CW_1_GPIO_Port, MOTOR_CW_1_Pin) == GPIO_PIN_SET) ? 0 : 1;
+    
+    // 确定内外侧轮子通道（保持当前运动方向）
+    typedef struct { 
+        uint32_t front; 
+        uint32_t rear; 
+    } WheelChannels; 
+    
+    WheelChannels inner, outer; 
+    if(turn_dir == MY_TURN_LEFT) // 左转 
+	{ 
+        inner.front = TIM_CHANNEL_1; // 左前 
+        inner.rear  = TIM_CHANNEL_3; // 左后 
+        outer.front = TIM_CHANNEL_2; // 右前 
+        outer.rear  = TIM_CHANNEL_4; // 右后 
+    } 
+	else 						// 右转 
+	{ 
+        inner.front = TIM_CHANNEL_2; // 右前 
+        inner.rear  = TIM_CHANNEL_4; // 右后 
+        outer.front = TIM_CHANNEL_1; // 左前 
+        outer.rear  = TIM_CHANNEL_3; // 左后 
+    } 
+    
+    // 获取当前PWM值
+    uint16_t current_pwm[4]; 
+    current_pwm[0] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_1); 
+    current_pwm[1] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_2); 
+    current_pwm[2] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_3); 
+    current_pwm[3] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_4); 
+
+    // 计算目标值 
+    uint16_t target_inner = speed_inner_table[level-1]; 
+    
+    // 初始化软启动参数 
+    accel_time_ms = (accel_time_ms == 0) ? DEFAULT_ACCEL_TIME : accel_time_ms; 
+    uint16_t steps = (accel_time_ms + STEP_TIME/2) / STEP_TIME; // 四舍五入 
+    steps = (steps == 0) ? 1 : steps; // 确保至少1步 
+
+    // 软启动过程
+    for(uint16_t step = 0; step <= steps; step++) { 
+        float ratio = (float)step / steps; 
+        
+        // 外侧轮处理
+        uint16_t outer_front_pwm = calculate_step_pwm(current_pwm[channel_to_index(outer.front)], speed_outer, ratio); 
+        uint16_t outer_rear_pwm  = calculate_step_pwm(current_pwm[channel_to_index(outer.rear)], speed_outer, ratio); 
+        
+        // 内侧轮处理
+        uint16_t inner_front_pwm = calculate_step_pwm(current_pwm[channel_to_index(inner.front)], target_inner, ratio); 
+        uint16_t inner_rear_pwm  = calculate_step_pwm(current_pwm[channel_to_index(inner.rear)], target_inner, ratio); 
+
+        // 设置PWM
+        __HAL_TIM_SetCompare(&htim2, outer.front, outer_front_pwm); 
+        __HAL_TIM_SetCompare(&htim2, outer.rear,  outer_rear_pwm); 
+        __HAL_TIM_SetCompare(&htim2, inner.front, inner_front_pwm); 
+        __HAL_TIM_SetCompare(&htim2, inner.rear,  inner_rear_pwm); 
+        
+        HAL_Delay(STEP_TIME); 
+    } 
+
+    // 最终状态强制同步
+    __HAL_TIM_SetCompare(&htim2, outer.front, speed_outer); 
+    __HAL_TIM_SetCompare(&htim2, outer.rear,  speed_outer); 
+    __HAL_TIM_SetCompare(&htim2, inner.front, target_inner); 
+    __HAL_TIM_SetCompare(&htim2, inner.rear,  target_inner); 
+} 
+
+
 
 void my_motor_control_task(void)
 {
@@ -337,23 +447,22 @@ void my_motor_control_task(void)
 //			HAL_Delay(1000);										//延时1S
 		    // 获取当前方向
 			current_car_dir = (HAL_GPIO_ReadPin(MOTOR_CW_1_GPIO_Port, MOTOR_CW_1_Pin) == GPIO_PIN_SET) ? MY_CAR_DIRECTION_FORWARD : MY_CAR_DIRECTION_BACKWARD;
-		printf("[MOTOR] g_MotorDirection :%d!\r\n",g_MotorDirection);
-		printf("[MOTOR] current_car_dir :%d!\r\n",current_car_dir);
 			// 如果方向不一致，先停车
 			if(current_car_dir != g_MotorDirection) 
 			{
 				printf("[MOTOR] set motor turn direction!\r\n");
 				my_motor_car_stop();									//4个电机电机停止
 				// 等待电机完全停止
-				HAL_Delay(50);  // 50ms等待时间，可根据实际情况调整
+				HAL_Delay(10);  // 50ms等待时间，可根据实际情况调整
 			}
 			my_motor_car_run(g_MotorSpeedLevel,g_MotorDirection);	//运行电机
 			break;
 		case CONTROL_MOTOR_TURN:
-			printf("[MOTOR] set motor turn!\r\n");
-			my_motor_car_stop();									//先让4个电机电机停止
-			HAL_Delay(1000);										//延时1S
-			car_turn(g_MotorTurnDirection,g_MotorTurnLevel);		//小车转向
+			printf("[MOTOR] set motor turn!,g_MotorTurnDirection:%d!\r\n",g_MotorTurnDirection);
+//			my_motor_car_stop();									//先让4个电机电机停止
+//			HAL_Delay(1000);										//延时1S
+//			car_turn(g_MotorTurnDirection,g_MotorTurnLevel);		//小车转向
+			car_turn_soft(g_MotorTurnDirection,g_MotorTurnLevel,0);	//线性转向，因此不需要停止，即使现在小车处于前进或者后退状态
 			break;
 		case CONTROL_MOTOR_STOP:
 			printf("[MOTOR] set motor stop!\r\n");
