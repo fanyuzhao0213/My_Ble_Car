@@ -31,3 +31,4 @@ motor_project\motor.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.
 motor_project\motor.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 motor_project\motor.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 motor_project\motor.o: ../Core/Inc/tim.h
+motor_project\motor.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h

@@ -1,5 +1,6 @@
 #include "motor.h"
 #include "tim.h"
+#include <stdlib.h>
 
 uint8_t g_MotorDirection = MY_CAR_DIRECTION_IDLE;				//电机方向 0：停止 1：前进，2：后退
 uint8_t g_MotorSpeedLevel = MY_CAR_SPEED_IDLE;					//电机速度等级 0：停止态  1 = 100%（全速）2 = 75% 3 = 50%4 = 30% 5 = 10%（最低速）
@@ -15,49 +16,152 @@ void motor_gpio_set_direction(uint8_t motor_channel, uint8_t direction)
     switch (motor_channel)
     {
         case 1:
-            HAL_GPIO_WritePin(MOTOR_CW_1_GPIO_Port, MOTOR_CW_1_Pin,  direction == 0 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(MOTOR_CW_1_GPIO_Port, MOTOR_CW_1_Pin, direction == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(MOTOR_CW_1_GPIO_Port, MOTOR_CW_1_Pin,  direction == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
             break;
         case 2:
-            HAL_GPIO_WritePin(MOTOR_CW_2_GPIO_Port, MOTOR_CW_2_Pin,  direction == 0 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(MOTOR_CW_2_GPIO_Port, MOTOR_CW_2_Pin, direction == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(MOTOR_CW_2_GPIO_Port, MOTOR_CW_2_Pin,  direction == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
             break;
         case 3:
-            HAL_GPIO_WritePin(MOTOR_CW_3_GPIO_Port, MOTOR_CW_3_Pin,  direction == 0 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(MOTOR_CW_3_GPIO_Port, MOTOR_CW_3_Pin, direction == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(MOTOR_CW_3_GPIO_Port, MOTOR_CW_3_Pin,  direction == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
             break;
         case 4:
-            HAL_GPIO_WritePin(MOTOR_CW_4_GPIO_Port, MOTOR_CW_4_Pin,  direction == 0 ? GPIO_PIN_SET : GPIO_PIN_RESET);
-            HAL_GPIO_WritePin(MOTOR_CW_4_GPIO_Port, MOTOR_CW_4_Pin, direction == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(MOTOR_CW_4_GPIO_Port, MOTOR_CW_4_Pin,  direction == 1 ? GPIO_PIN_SET : GPIO_PIN_RESET);
             break;
         default: break;
     }
 }
 
-
 /**
- * @brief     控制某一路电机的速度和方向
- * @param     motor_channel 电机通道编号，范围为 1~4，分别对应 TIM2 的 CH1~CH4
- * @param     speed_level   电机速度等级：
+ * @brief     同时控制4个电机的软启动速度控制(统一速度和方向版)
+ * @param     target_speed_level   所有电机的速度等级：
  *                           1 = 100%（全速）
  *                           2 = 75%
  *                           3 = 50%
  *                           4 = 30%
  *                           5 = 10%（最低速）
- * @param     direction      电机方向：
+ * @param     direction      所有电机的方向：
  *                           0 = 前进（正转）
  *                           1 = 后退（反转）
- * @note      需要在 motor_gpio_set_direction() 中定义每个通道控制方向的 GPIO。
+ * @param     accel_time_ms  加速时间(ms)，0=使用默认值200ms
  */
-void motor_set_speed_dir(uint8_t motor_channel, uint8_t speed_level, uint8_t direction)
+void motors_set_speed_soft(uint8_t target_speed_level,
+                          uint8_t direction,
+                          uint16_t accel_time_ms)
 {
-    const uint16_t duty_table[] = {1000, 750, 500, 300, 100};
+    const uint16_t duty_table[] = {1000, 750, 500, 300, 100};	//速度等级值
     TIM_HandleTypeDef *htim = &htim2;
-
-    if (motor_channel < 1 || motor_channel > 4 ||  speed_level > 5 || speed_level < 1)
+    uint32_t tim_channels[] = {
+        TIM_CHANNEL_1, TIM_CHANNEL_2,
+        TIM_CHANNEL_3, TIM_CHANNEL_4
+    };
+    
+    // 参数检查
+    if(target_speed_level < 1 || target_speed_level > 5) {
         return;
+    }
+    
+    // 目标PWM值
+    uint16_t target_pwm = duty_table[target_speed_level-1];
+    
+    // 获取所有电机当前PWM值
+    uint16_t current_pwms[4];
+    int32_t max_delta = 0;
+    
+    for(int i = 0; i < 4; i++) {
+        // 设置电机方向
+        motor_gpio_set_direction(i+1, direction);
+        
+        // 获取当前PWM值
+        current_pwms[i] = __HAL_TIM_GetCompare(htim, tim_channels[i]);
+        
+        // 计算最大变化量(用于确定加速步数)//labs - 输入：一个长整型数（可以是正数或负数）- 输出：返回这个数的绝对值（总是正数）
+		// 确保不管是加速还是减速 这个值都是正的
+		int32_t delta = labs((int32_t)target_pwm - (int32_t)current_pwms[i]);
+        if(delta > max_delta) {
+            max_delta = delta;
+        }
+    }
+    
+    // 如果所有电机都已经是目标速度，直接返回
+    if(max_delta == 0) {
+        return;
+    }
+    
+    // 计算加速参数
+    uint16_t step_time_ms = 10; 								// 每步10ms
+    accel_time_ms = (accel_time_ms == 0) ? 200 : accel_time_ms;	//默认200ms加速完成，如果传0则200ms内加速减速完成
+	//- 这行代码使用了四舍五入的计算方法- step_time_ms/2 是为了实现四舍五入（加上半个步长）
+	uint16_t steps = (accel_time_ms + step_time_ms/2) / step_time_ms;
+	//- 确保步数至少为1
+	//- 防止出现零步的情况，这可能导致电机无法启动
+    steps = (steps == 0) ? 1 : steps;
+    
+    // 计算基础步进值和余数
+    int32_t base_step = max_delta / steps;			//例如200ms  一共20步       如果增加1000ms  每步增加 1000/20 = 50ms
+    int32_t remainder = max_delta % steps;			//余数为0
+	//如果总变化量是545，需要10步完成
+	//base_step = 545 ÷ 10 = 54
+	//remainder = 545 % 10 = 5
+	//那么前5步的increment为55，后5步为54
+    // 执行平滑加速
+    for(uint16_t step = 0; step < steps; step++) {
+        // 计算当前步进值（包含余数分配）
+        int32_t increment = base_step;
+        if(remainder > 0) {
+            increment++;
+            remainder--;
+        }
+        
+        // 更新所有电机PWM值
+        for(int i = 0; i < 4; i++) {
+            if(current_pwms[i] < target_pwm) {
+                current_pwms[i] += increment;
+                if(current_pwms[i] > target_pwm) {
+                    current_pwms[i] = target_pwm;
+                }
+            } else if(current_pwms[i] > target_pwm) {
+                current_pwms[i] -= increment;
+                if(current_pwms[i] < target_pwm) {
+                    current_pwms[i] = target_pwm;
+                }
+            }
+            __HAL_TIM_SetCompare(htim, tim_channels[i], current_pwms[i]);
+        }
+        
+        HAL_Delay(step_time_ms);
+    }
+    
+    // 确保所有电机最终值精确
+    for(int i = 0; i < 4; i++) {
+        __HAL_TIM_SetCompare(htim, tim_channels[i], target_pwm);
+    }
+}
 
-    // 映射 PWM 通道
+
+//设置小车运行以特定的速度等级和方向
+void my_motor_car_run(uint8_t speed_level, uint8_t direction)
+{
+	motors_set_speed_soft(speed_level,direction,0);		//默认200ms加减速
+}
+
+/**
+ * @brief     平滑停止某一路电机
+ * @param     motor_channel 电机通道编号，范围为 1~4，分别对应 TIM 的 CH1~CH4
+ * @param     decel_time_ms 减速时间(毫秒)，默认100ms(如果传入0)
+ * @note      本函数使用 TIM2，需确保 TIM2 的 PWM 已经初始化并启动
+ * @note      此函数会阻塞当前线程直到减速完成
+ */
+void motor_soft_stop(uint8_t motor_channel, uint16_t decel_time_ms)
+{
+    TIM_HandleTypeDef *htim = &htim2;
+    const uint16_t DEFAULT_DECEL_TIME = 100; // 默认减速时间100ms
+    const uint16_t STEP_TIME = 10;           // 每步10ms
+    
+    // 参数检查
+    if (motor_channel < 1 || motor_channel > 4) return;
+    if (decel_time_ms == 0) decel_time_ms = DEFAULT_DECEL_TIME;
+    
+    // 映射通道号
     uint32_t tim_channel;
     switch (motor_channel)
     {
@@ -67,22 +171,91 @@ void motor_set_speed_dir(uint8_t motor_channel, uint8_t speed_level, uint8_t dir
         case 4: tim_channel = TIM_CHANNEL_4; break;
         default: return;
     }
-
-    // 设置 PWM 占空比
-    __HAL_TIM_SetCompare(htim, tim_channel, duty_table[speed_level-1]);
-
-    // 设置方向
-    motor_gpio_set_direction(motor_channel, direction);
+    
+    // 获取当前PWM值
+    uint32_t current_pwm = __HAL_TIM_GetCompare(htim, tim_channel);
+    if (current_pwm == 0) return;  // 已经停止
+    
+    // 计算减速步数
+    uint16_t steps = decel_time_ms / STEP_TIME;
+    if (steps == 0) steps = 1;
+    uint32_t step_size = current_pwm / steps;
+    
+    // 逐步降低PWM
+    while (current_pwm > 0)
+    {
+        if (current_pwm > step_size)
+            current_pwm -= step_size;
+        else
+            current_pwm = 0;
+            
+        __HAL_TIM_SetCompare(htim, tim_channel, current_pwm);
+        HAL_Delay(STEP_TIME);
+    }
 }
 
-//设置小车运行以特定的速度等级和方向
-void my_motor_car_run(uint8_t speed_level, uint8_t direction)
+/**
+ * @brief     同步平滑停止所有4路电机
+ * @param     decel_time_ms 减速时间(毫秒)，如果需要200ms内停止电机，则传入200，否则默认是100ms停止电机
+总步数(steps) = 减速时间 / 步进时间 = 100ms / 10ms = 10步
+每步减少量(step_size) = max_pwm / steps = 800 / 10 = 80
+
+ */
+void stop_all_motors_sync(uint16_t decel_time_ms)
 {
-	for(uint8_t i =0; i<=3; i++)
-	{
-		motor_set_speed_dir(i+1,speed_level,direction);
-	}
+    TIM_HandleTypeDef *htim = &htim2;
+    const uint16_t DEFAULT_DECEL_TIME = 100;
+    const uint16_t STEP_TIME = 10;
+    
+    if(decel_time_ms == 0) decel_time_ms = DEFAULT_DECEL_TIME;
+    
+    // 获取所有通道当前PWM值
+    uint32_t pwm_values[4] = {
+        __HAL_TIM_GetCompare(htim, TIM_CHANNEL_1),
+        __HAL_TIM_GetCompare(htim, TIM_CHANNEL_2),
+        __HAL_TIM_GetCompare(htim, TIM_CHANNEL_3),
+        __HAL_TIM_GetCompare(htim, TIM_CHANNEL_4)
+    };
+    
+    // 找出最大的PWM值作为基准
+    uint32_t max_pwm = 0;
+    for(int i = 0; i < 4; i++) {
+        if(pwm_values[i] > max_pwm) max_pwm = pwm_values[i];
+    }
+    if(max_pwm == 0) return;  // 所有电机已经停止
+    
+    // 计算减速参数
+    uint16_t steps = decel_time_ms / STEP_TIME;
+    if(steps == 0) steps = 1;
+    uint32_t step_size = max_pwm / steps;
+    
+    // 同步减速循环
+    while(max_pwm > 0)
+    {
+        // 计算新PWM值（不能小于0）
+        if(max_pwm > step_size) {
+            max_pwm -= step_size;
+        } else {
+            max_pwm = 0;
+        }
+        
+        // 更新所有通道（按比例减速）
+        for(int i = 0; i < 4; i++) {
+            if(pwm_values[i] > 0) {
+                uint32_t new_pwm = (pwm_values[i] * max_pwm) / (max_pwm + step_size);
+                __HAL_TIM_SetCompare(htim, 
+                    (i == 0) ? TIM_CHANNEL_1 :
+                    (i == 1) ? TIM_CHANNEL_2 :
+                    (i == 2) ? TIM_CHANNEL_3 : TIM_CHANNEL_4,
+                    new_pwm);
+                pwm_values[i] = new_pwm;
+            }
+        }
+        
+        HAL_Delay(STEP_TIME);
+    }
 }
+
 /**
  * @brief     设置某一路电机停止
  * @param     motor_channel 电机通道编号，范围为 1~4，分别对应 TIM 的 CH1~CH4
@@ -113,10 +286,7 @@ void motor_stop(uint8_t motor_channel)
 //设置小车停止
 void my_motor_car_stop(void)
 {
-	motor_stop(1);
-	motor_stop(2);
-	motor_stop(3);
-	motor_stop(4);
+	stop_all_motors_sync(200);		//设置小车200ms所有电机停止
 }
 
 /**
@@ -155,24 +325,38 @@ void car_turn(uint8_t turn_dir, uint8_t level)
 
 void my_motor_control_task(void)
 {
+	uint8_t current_car_dir = 0;
 	if(g_ControlMotorFlag == CONTROL_MOTOR_IDLE)
 		return;
 	switch(g_ControlMotorFlag)
 	{
 		case CONTROL_MOTOR_DIRECTION:
-			printf("[MAIN] set motor run and speedlevel!\r\n");
-			my_motor_car_stop();									//先让4个电机电机停止
-			HAL_Delay(1000);										//延时1S
+			printf("[MOTOR] set motor run and speedlevel!\r\n");
+			//做了软启动速度控制 的加减速  因此不需要再停止电机
+//			my_motor_car_stop();									//先让4个电机电机停止
+//			HAL_Delay(1000);										//延时1S
+		    // 获取当前方向
+			current_car_dir = (HAL_GPIO_ReadPin(MOTOR_CW_1_GPIO_Port, MOTOR_CW_1_Pin) == GPIO_PIN_SET) ? MY_CAR_DIRECTION_FORWARD : MY_CAR_DIRECTION_BACKWARD;
+		printf("[MOTOR] g_MotorDirection :%d!\r\n",g_MotorDirection);
+		printf("[MOTOR] current_car_dir :%d!\r\n",current_car_dir);
+			// 如果方向不一致，先停车
+			if(current_car_dir != g_MotorDirection) 
+			{
+				printf("[MOTOR] set motor turn direction!\r\n");
+				my_motor_car_stop();									//4个电机电机停止
+				// 等待电机完全停止
+				HAL_Delay(50);  // 50ms等待时间，可根据实际情况调整
+			}
 			my_motor_car_run(g_MotorSpeedLevel,g_MotorDirection);	//运行电机
 			break;
 		case CONTROL_MOTOR_TURN:
-			printf("[MAIN] set motor turn!\r\n");
+			printf("[MOTOR] set motor turn!\r\n");
 			my_motor_car_stop();									//先让4个电机电机停止
 			HAL_Delay(1000);										//延时1S
 			car_turn(g_MotorTurnDirection,g_MotorTurnLevel);		//小车转向
 			break;
 		case CONTROL_MOTOR_STOP:
-			printf("[MAIN] set motor stop!\r\n");
+			printf("[MOTOR] set motor stop!\r\n");
 			my_motor_car_stop();									//4个电机电机停止
 			break;
 		default:
