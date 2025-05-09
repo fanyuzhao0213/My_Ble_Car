@@ -26,6 +26,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "motor.h"
+#include "HC_SR04.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -69,7 +70,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -104,17 +104,26 @@ int main(void)
   MX_DMA_Init();
   MX_USART3_UART_Init();
   MX_TIM3_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+  	HAL_TIM_Base_Start_IT(&htim1);        	// 启动定时器1基础功能
 	__HAL_UART_ENABLE_IT(&huart3, UART_IT_IDLE);    
 	HAL_UART_Receive_DMA(&huart3,rx_buffer,MAXSIZE);	
 
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_1);
-	printf("systerm init!\n");
+	printf("[MAIN] motor ble car systerm init!\r\n");
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
+	
+	printf("[MAIN] while process init!\r\n");
+//	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+//	HAL_Delay(100);
+//	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+//	HAL_Delay(100);
+//	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -123,7 +132,9 @@ int main(void)
   {
 		my_motor_control_protocol_analysis();
 		my_motor_control_task();
+		Ultrasonic_Task_Handler();				//超声波测量前后距离task
     /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

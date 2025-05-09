@@ -8,6 +8,7 @@
 "motor_project\stm32f1xx_it.o"
 "motor_project\stm32f1xx_hal_msp.o"
 "motor_project\motor.o"
+"motor_project\hc_sr04.o"
 "motor_project\stm32f1xx_hal_gpio_ex.o"
 "motor_project\stm32f1xx_hal_tim.o"
 "motor_project\stm32f1xx_hal_tim_ex.o"

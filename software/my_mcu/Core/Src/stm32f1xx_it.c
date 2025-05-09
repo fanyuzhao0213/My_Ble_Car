@@ -22,6 +22,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "HC_SR04.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,6 +56,7 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
+extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 extern TIM_HandleTypeDef htim3;
 extern DMA_HandleTypeDef hdma_usart3_rx;
@@ -232,6 +234,20 @@ void DMA1_Channel3_IRQHandler(void)
 }
 
 /**
+  * @brief This function handles TIM1 update interrupt.
+  */
+void TIM1_UP_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM1_UP_IRQn 0 */
+
+  /* USER CODE END TIM1_UP_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim1);
+  /* USER CODE BEGIN TIM1_UP_IRQn 1 */
+
+  /* USER CODE END TIM1_UP_IRQn 1 */
+}
+
+/**
   * @brief This function handles TIM2 global interrupt.
   */
 void TIM2_IRQHandler(void)
@@ -298,14 +314,94 @@ void USART3_IRQHandler(void)
   /* USER CODE END USART3_IRQn 1 */
 }
 
+/**
+  * @brief This function handles EXTI line[15:10] interrupts.
+  */
+void EXTI15_10_IRQHandler(void)
+{
+  /* USER CODE BEGIN EXTI15_10_IRQn 0 */
+
+  /* USER CODE END EXTI15_10_IRQn 0 */
+  HAL_GPIO_EXTI_IRQHandler(Front_Echo_Pin);
+  HAL_GPIO_EXTI_IRQHandler(Rear_Echo_Pin);
+  /* USER CODE BEGIN EXTI15_10_IRQn 1 */
+
+  /* USER CODE END EXTI15_10_IRQn 1 */
+}
+
 /* USER CODE BEGIN 1 */
+/*外部中断触发函数*/
+
+// 添加消抖时间定义
+#define DEBOUNCE_TIME  10  // 10us消抖时间
+
+// 修改中断回调函数
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) 
+{ 
+    static uint32_t last_interrupt_time = 0;
+    uint32_t current_time;
+    uint8_t sensor;
+    
+    // 获取当前时间
+    current_time = __HAL_TIM_GET_COUNTER(&htim3);
+    
+    // 消抖处理
+    if((current_time - last_interrupt_time) < DEBOUNCE_TIME)
+    {
+        return;  // 忽略抖动
+    }
+    last_interrupt_time = current_time;
+    
+    // 确定是哪个传感器触发的中断 
+    if(GPIO_Pin == Front_Echo_Pin) 
+    { 
+        sensor = SENSOR_FRONT; 
+    } 
+    else if(GPIO_Pin == Rear_Echo_Pin) 
+    { 
+        sensor = SENSOR_BACK; 
+    } 
+    else 
+        return; 
+    
+    // 根据电平状态记录时间 
+    if(HAL_GPIO_ReadPin(sensor == SENSOR_FRONT ? Front_Echo_GPIO_Port : Rear_Echo_GPIO_Port, 
+                        GPIO_Pin) == GPIO_PIN_SET) 
+    { 
+        // 上升沿，清零计数器并开始计时
+        __HAL_TIM_SET_COUNTER(&htim1, 0);
+        HC_SR04_DATA[sensor].echo_start = 0;
+        HC_SR04_DATA[sensor].measure_complete = 0;  // 清除完成标志
+    } 
+    else 
+    { 
+        // 下降沿，记录计数器值
+        HC_SR04_DATA[sensor].echo_end = __HAL_TIM_GET_COUNTER(&htim1);
+        // 检查时间是否在合理范围内(最大25ms)
+        if(HC_SR04_DATA[sensor].echo_end < 25000)
+        {
+            HC_SR04_DATA[sensor].measure_complete = 1;
+        }
+    } 
+} 
+
+
+
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-	if(htim == &htim3){								    /* 判断是否为定时器TIM2 */
-		 if(ic_state[Motor_channel] == runing){					    /* 判断是否为是 正在运行状态 */
-//			  printf("溢出了一次!\r\n");
-		 }
+	static uint8_t hc_sr04_count =0;
+	if(htim == &htim3)
+	{								    		
+		if(ic_state[Motor_channel] == runing)	/* 判断是否为是 正在运行状态 */
+		{
+			
+		}
 	}
+	if(htim == &htim1)							//定时器1中断 进去一次是65ms
+    {
+//		Ultrasonic_Task_Handler();				//超声波测量前后距离task
+//        HAL_GPIO_TogglePin(GPIOA,GPIO_PIN_8);
+    }
 }
 	
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
@@ -327,7 +423,7 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
             case 3: __HAL_TIM_SET_CAPTUREPOLARITY(&htim3, TIM_CHANNEL_4, TIM_INPUTCHANNELPOLARITY_FALLING); break;
         }
 		 }else{								             						/* 此时不是空闲状态 */
-				ic_state[Motor_channel] = idle;						     	/* 将状态设置为 空闲  继续捕获*/
+				ic_state[Motor_channel] = idle;						     		/* 将状态设置为 空闲  继续捕获*/
 				// 设置当前通道为上升沿
         switch(Motor_channel) {
             case 0: 

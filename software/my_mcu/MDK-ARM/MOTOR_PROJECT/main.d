@@ -34,3 +34,4 @@ motor_project\main.o: ../Core/Inc/tim.h
 motor_project\main.o: ../Core/Inc/usart.h
 motor_project\main.o: ../Core/Inc/gpio.h
 motor_project\main.o: ..\Motor\motor.h
+motor_project\main.o: ..\Motor\HC_SR04.h

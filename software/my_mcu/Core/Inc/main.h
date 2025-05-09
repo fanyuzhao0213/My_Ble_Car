@@ -78,6 +78,16 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
+#define Front_Trig_Pin GPIO_PIN_12
+#define Front_Trig_GPIO_Port GPIOB
+#define Front_Echo_Pin GPIO_PIN_13
+#define Front_Echo_GPIO_Port GPIOB
+#define Front_Echo_EXTI_IRQn EXTI15_10_IRQn
+#define Rear_Trig_Pin GPIO_PIN_14
+#define Rear_Trig_GPIO_Port GPIOB
+#define Rear_Echo_Pin GPIO_PIN_15
+#define Rear_Echo_GPIO_Port GPIOB
+#define Rear_Echo_EXTI_IRQn EXTI15_10_IRQn
 #define MOTOR_CW_1_Pin GPIO_PIN_3
 #define MOTOR_CW_1_GPIO_Port GPIOB
 #define MOTOR_CW_2_Pin GPIO_PIN_4

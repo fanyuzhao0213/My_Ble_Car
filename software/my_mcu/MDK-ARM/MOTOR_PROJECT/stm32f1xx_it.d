@@ -30,3 +30,4 @@ motor_project\stm32f1xx_it.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_
 motor_project\stm32f1xx_it.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 motor_project\stm32f1xx_it.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 motor_project\stm32f1xx_it.o: ../Core/Inc/stm32f1xx_it.h
+motor_project\stm32f1xx_it.o: ..\Motor\HC_SR04.h
