@@ -370,11 +370,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     { 
         // 上升沿，清零计数器并开始计时
         __HAL_TIM_SET_COUNTER(&htim1, 0);
+		rising_count++;
         HC_SR04_DATA[sensor].echo_start = 0;
         HC_SR04_DATA[sensor].measure_complete = 0;  // 清除完成标志
+		
     } 
     else 
     { 
+		falling_count++;
         // 下降沿，记录计数器值
         HC_SR04_DATA[sensor].echo_end = __HAL_TIM_GET_COUNTER(&htim1);
         // 检查时间是否在合理范围内(最大25ms)

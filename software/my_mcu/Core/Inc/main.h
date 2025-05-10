@@ -51,6 +51,9 @@ extern uint32_t Motor2_Number_Of_Pulses;		//电机通道2脉冲计数
 extern uint32_t Motor3_Number_Of_Pulses;		//电机通道3脉冲计数
 extern uint32_t Motor4_Number_Of_Pulses;		//电机通道4脉冲计数
 
+extern uint32_t rising_count;
+extern uint32_t falling_count;
+
 #define MAXSIZE  256
 
 extern uint8_t rx_buffer[MAXSIZE];//接收数组

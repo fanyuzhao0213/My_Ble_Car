@@ -139,9 +139,9 @@ uint8_t Is_Back_Safe(void)
  */
 void Ultrasonic_Task_Handler(void)
 {
-	uint32_t start_time, end_time;       // 函数执行时间记录
-	// 记录函数开始执行时间
-    start_time = HAL_GetTick();
+//	uint32_t start_time, end_time;       // 函数执行时间记录
+//	// 记录函数开始执行时间
+//    start_time = HAL_GetTick();
 	// 测量前方距离
 	HC_SR04_StartMeasure(SENSOR_FRONT);
 	ultrasonic_data.front_distance = HC_SR04_GetFrontDistance();
@@ -154,9 +154,8 @@ void Ultrasonic_Task_Handler(void)
 	// 检查前方安全距离
 	if(!Is_Front_Safe() && g_MotorDirection == MY_CAR_DIRECTION_FORWARD)
 	{
-//		printf("前方障碍物！紧急停车！\r\n");
+		printf("前方障碍物！紧急停车！\r\n");
 	}
-	end_time = HAL_GetTick();
 	HAL_Delay(100);
 	
 //	// 测量后方距离
@@ -170,9 +169,11 @@ void Ultrasonic_Task_Handler(void)
 //	// 检查后方安全距离
 //	if(!Is_Back_Safe() && g_MotorDirection == MY_CAR_DIRECTION_BACKWARD)
 //	{
-//		printf("前方障碍物！紧急停车！\r\n");
+//		printf("后方障碍物！紧急停车！\r\n");
 //	}
 //	HAL_Delay(100);
+	
+	
 //	// 记录函数结束时间并计算执行时间
 //    end_time = HAL_GetTick();
 }

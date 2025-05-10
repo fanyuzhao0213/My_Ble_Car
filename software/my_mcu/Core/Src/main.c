@@ -42,6 +42,9 @@ uint32_t Motor2_Number_Of_Pulses = 0;
 uint32_t Motor3_Number_Of_Pulses = 0;
 uint32_t Motor4_Number_Of_Pulses = 0;
 uint32_t Motor_channel = 0;
+
+uint32_t rising_count = 0;
+uint32_t falling_count = 0;
 	
 IC_STATE ic_state[4];	  /* 定义结构体变量 */
 
@@ -119,11 +122,6 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
 	
 	printf("[MAIN] while process init!\r\n");
-//	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-//	HAL_Delay(100);
-//	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-//	HAL_Delay(100);
-//	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
