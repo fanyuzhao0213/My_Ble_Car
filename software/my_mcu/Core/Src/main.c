@@ -115,11 +115,12 @@ int main(void)
 
 	HAL_TIM_Base_Start_IT(&htim3);
 	HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_1);
+	HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_2);
+	HAL_TIM_IC_Start_IT(&htim3,TIM_CHANNEL_3);
 	printf("[MAIN] motor ble car systerm init!\r\n");
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_3);
-	HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_4);
 	
 	printf("[MAIN] while process init!\r\n");
   /* USER CODE END 2 */

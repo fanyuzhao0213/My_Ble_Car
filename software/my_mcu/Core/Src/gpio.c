@@ -56,7 +56,7 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, MOTOR_CW_1_Pin|MOTOR_CW_2_Pin|MOTOR_CW_3_Pin|MOTOR_CW_4_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, MOTOR_CW_1_Pin|MOTOR_CW_2_Pin|MOTOR_CW_3_Pin|MOTOR_CW_4_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PBPin PBPin */
   GPIO_InitStruct.Pin = Front_Trig_Pin|Rear_Trig_Pin;
