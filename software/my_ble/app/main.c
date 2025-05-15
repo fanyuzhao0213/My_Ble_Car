@@ -59,7 +59,7 @@ static void my_timeout_handler (void * p_context)
 	if(g_AppConnectFlag == 1)
 	{
 		g_AppConnectTimeCount++;
-		if(g_AppConnectTimeCount >= 15) //15S
+		if(g_AppConnectTimeCount >= 30) //30S
 		{
 			NRF_LOG_INFO("[BLE] Disconnected  30S !");  
 			my_ble_disconnect();	//³¬Ê±¶Ï¿ª

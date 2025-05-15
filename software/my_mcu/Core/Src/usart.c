@@ -437,10 +437,7 @@ void control_protocol_analysis(uint8_t *data, uint8_t len)
 			my_uart3_tx_to_BLE(0xA4,0);
 			break;
 		case 0xA5:
-			g_MotorDirection = MY_CAR_DIRECTION_IDLE;				//电机方向 0：停止 1：前进，2：后退
-			g_MotorSpeedLevel = MY_CAR_SPEED_IDLE;					//电机速度等级 0：停止态  1 = 100%（全速）2 = 75% 3 = 50%4 = 30% 5 = 10%（最低速）
-			g_MotorTurnDirection = MY_TURN_IDLE;					//电机转弯方向 0：无转弯  1：左转弯，2：右转弯
-			g_MotorTurnLevel = MY_TURN_LEVEL_IDLE;					//电机转弯等级 0：停止态  转弯强度等级：1 = 轻微，2 = 中等，3 = 急转
+			my_set_car_stop_func();
 			my_uart3_tx_to_BLE(0xA5,0);
 			g_ControlMotorFlag = CONTROL_MOTOR_STOP;	//控制电机标志位处于停止
 		default:
@@ -473,5 +470,14 @@ void my_motor_control_protocol_analysis(void)
 	
 }
 
+
+//控制小车停止
+void my_set_car_stop_func(void)
+{
+	g_MotorDirection = MY_CAR_DIRECTION_IDLE;				//电机方向 0：停止 1：前进，2：后退
+	g_MotorSpeedLevel = MY_CAR_SPEED_IDLE;					//电机速度等级 0：停止态  1 = 100%（全速）2 = 75% 3 = 50%4 = 30% 5 = 10%（最低速）
+	g_MotorTurnDirection = MY_TURN_IDLE;					//电机转弯方向 0：无转弯  1：左转弯，2：右转弯
+	g_MotorTurnLevel = MY_TURN_LEVEL_IDLE;					//电机转弯等级 0：停止态  转弯强度等级：1 = 轻微，2 = 中等，3 = 急转
+}
 
 /* USER CODE END 1 */

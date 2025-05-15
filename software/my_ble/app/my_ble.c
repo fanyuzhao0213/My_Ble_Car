@@ -566,39 +566,50 @@ void on_adv_evt(ble_adv_evt_t ble_adv_evt)
             break;
     }
 }
-//广播初始化
-void advertising_init(void)
-{
-    ret_code_t             err_code;
-	  //定义广播初始化配置结构体变量
-    ble_advertising_init_t init;
-    //配置之前先清零
-    memset(&init, 0, sizeof(init));
-    //设备名称类型：全称
-    init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
-	  //是否包含外观：包含
-    init.advdata.include_appearance      = false;
-	  //Flag:一般可发现模式，不支持BR/EDR
-    init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-	  //UUID放到扫描响应里面
-	  init.srdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    init.srdata.uuids_complete.p_uuids  = m_adv_uuids;
-	
-    //设置广播模式为快速广播
-    init.config.ble_adv_fast_enabled  = true;
-	  //设置广播间隔和广播持续时间
-    init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
-    init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
-    //广播事件回调函数
-    init.evt_handler = on_adv_evt;
-    //初始化广播
-    err_code = ble_advertising_init(&m_advertising, &init);
+void advertising_init(void) 
+{ 
+    ret_code_t err_code; 
+    //定义广播初始化配置结构体变量 
+    ble_advertising_init_t init; 
+    //配置之前先清零 
+    memset(&init, 0, sizeof(init)); 
+
+    // 获取设备MAC地址
+    ble_gap_addr_t device_addr;
+    err_code = sd_ble_gap_addr_get(&device_addr);
     APP_ERROR_CHECK(err_code);
-    //设置广播配置标记。APP_BLE_CONN_CFG_TAG是用于跟踪广播配置的标记，这是为未来预留的一个参数，在将来的SoftDevice版本中，
-		//可以使用sd_ble_gap_adv_set_configure()配置新的广播配置
-		//当前SoftDevice版本（S132 V7.0.1版本）支持的最大广播集数量为1，因此APP_BLE_CONN_CFG_TAG只能写1。
-    ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG);
-}
+
+    // 配置制造商特定数据
+    ble_advdata_manuf_data_t manuf_specific_data;
+    manuf_specific_data.company_identifier = 0x1234;  // 使用自定义公司标识符
+    manuf_specific_data.data.p_data = &device_addr.addr[0];
+    manuf_specific_data.data.size = 6;
+
+    //设备名称类型：全称 
+    init.advdata.name_type = BLE_ADVDATA_FULL_NAME;
+    //是否包含外观：不包含 
+    init.advdata.include_appearance = false;
+    //添加制造商特定数据
+    init.advdata.p_manuf_specific_data = &manuf_specific_data;
+    //Flag:一般可发现模式，不支持BR/EDR 
+    init.advdata.flags = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+    //UUID放到扫描响应里面 
+    init.srdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]); 
+    init.srdata.uuids_complete.p_uuids = m_adv_uuids; 
+
+    //设置广播模式为快速广播 
+    init.config.ble_adv_fast_enabled = true; 
+    //设置广播间隔和广播持续时间 
+    init.config.ble_adv_fast_interval = APP_ADV_INTERVAL; 
+    init.config.ble_adv_fast_timeout = APP_ADV_DURATION; 
+    //广播事件回调函数 
+    init.evt_handler = on_adv_evt; 
+    //初始化广播 
+    err_code = ble_advertising_init(&m_advertising, &init); 
+    APP_ERROR_CHECK(err_code); 
+    //设置广播配置标记
+    ble_advertising_conn_cfg_tag_set(&m_advertising, APP_BLE_CONN_CFG_TAG); 
+} 
 
 //BLE事件处理函数
 void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)

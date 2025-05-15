@@ -47,6 +47,8 @@ extern void my_printArray(uint8_t arr[], int size, char* str);
 extern void my_motor_control_protocol_analysis(void);
 extern uint8_t my_check_code_calculate(uint8_t * data, uint16_t len);
 extern uint8_t my_check_code_analysis(uint8_t * data, uint16_t len);
+
+extern void my_set_car_stop_func(void);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus
