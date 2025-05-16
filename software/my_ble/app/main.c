@@ -16,6 +16,7 @@
 #include "my_ble_scan.h"
 #include "my_ble.h"
 #include "my_ble_mac.h"
+#include "nrfx_wdt.h"
 
 char sensor_ble_code[16]= "ABCDEFFYZ1234567";
 char sensor_password[16]= "2025042412001234";
@@ -30,6 +31,36 @@ uint8_t g_AppConnectTimeCount = 0;	//APP连接计时
 
 //设备名称数组  中文名称：串口透传
 const char device_name[12] = {0xE4,0xB8,0xB2,0xE5,0x8F,0xA3,0xE9,0x80,0x8F,0xE4,0xBC,0xA0};
+
+
+//保存申请的喂狗通道
+nrfx_wdt_channel_id m_channel_id;
+//WDT中断中可花费的最长的时间是2个32.768KHz时钟周期，之后系统复位
+void wdt_event_handler(void)
+{
+  //点亮4个LED。因为最长只有2个32.768KHz时钟周期的时间，所以程序运行后我们会
+	//看到4个LED微弱地闪烁一次，也就是4个LED刚点亮，系统就复位了，复位后，4个
+	//LED熄灭
+	bsp_board_leds_on();
+}
+//看门狗初始化，初始化完成后会启动看门狗，看门狗一旦启动后就无法停止
+void wdt_init(void)
+{
+    uint32_t err_code = NRF_SUCCESS;
+    
+    //定义WDT配置结构体并使用
+    nrfx_wdt_config_t config = NRFX_WDT_DEAFULT_CONFIG;
+	//初始化WDT
+    err_code = nrfx_wdt_init(&config, wdt_event_handler);
+    APP_ERROR_CHECK(err_code);
+	//申请喂狗通道，也就是使用哪个
+    err_code = nrfx_wdt_channel_alloc(&m_channel_id);
+    APP_ERROR_CHECK(err_code);
+	// 配置WDT超时时间为3秒
+	NRF_WDT->CRV = 3 * 32768; // 32.768kHz时钟，所以3秒 = 3 * 32768个时钟周期
+	  //启动WDT
+    nrfx_wdt_enable();       
+}
 
 
 //初始化电源管理模块
@@ -126,6 +157,8 @@ int main(void)
 	my_ble_init();						//协议栈以及GATT,GAP,广播等初始化
 	my_ble_mac_init();					//MAC地址初始化
     my_scan_init();	    				//初始化扫描
+	//初始化并启动WDT
+	wdt_init(); 
 	NRF_LOG_INFO("[MAIN] PROJECT_SW_VERSION : %s",PROJECT_SW_VERSION);  
 	NRF_LOG_INFO("[MAIN] DEVICE_NAME : %s",DEVICE_NAME);  
 	advertising_start();	//启动广播
@@ -138,7 +171,8 @@ int main(void)
 	//主循环
 	while(true)
 	{
-		my_nus_data_recv_handler_task();			//从机TASK
+		my_nus_data_recv_handler_task();			//从机TASK	
+		nrfx_wdt_channel_feed(m_channel_id);		//喂狗
 		//处理挂起的LOG和运行电源管理
 		idle_state_handle();
 	}

@@ -131,7 +131,7 @@ int main(void)
   {
 		my_motor_control_protocol_analysis();
 		my_motor_control_task();
-		Ultrasonic_Task_Handler();				//超声波测量前后距离task
+//		Ultrasonic_Task_Handler();				//超声波测量前后距离task
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -303,7 +303,7 @@ void USART3_IRQHandler(void)
 	if((tmp_flag != RESET))//通过标志位判断接收是否结束
 	{ 
 		recv_end_flag = 1; //置1表明接收结束
-		__HAL_UART_CLEAR_IDLEFLAG(&huart1);//清除标志位
+		__HAL_UART_CLEAR_IDLEFLAG(&huart3);//清除标志位
 		HAL_UART_DMAStop(&huart3); 
 		uint8_t temp=__HAL_DMA_GET_COUNTER(&hdma_usart3_rx);
 		rx_len = MAXSIZE-temp; //计算出数据长度

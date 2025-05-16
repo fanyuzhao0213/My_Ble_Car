@@ -130,7 +130,7 @@ void uart_config(void)
 		CTS_PIN_NUMBER,//定义uart CTS引脚
 		APP_UART_FLOW_CONTROL_DISABLED,//关闭uart硬件流控
 		false,//禁止奇偶检验
-		NRF_UART_BAUDRATE_115200//uart波特率设置为115200bps
+		NRF_UART_BAUDRATE_9600//uart波特率设置为115200bps
 	};
 	//初始化串口，注册串口事件回调函数
 	APP_UART_FIFO_INIT(&comm_params,

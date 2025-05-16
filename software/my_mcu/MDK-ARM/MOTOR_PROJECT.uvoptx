@@ -185,6 +185,11 @@
           <WinNumber>1</WinNumber>
           <ItemText>ultrasonic_data</ItemText>
         </Ww>
+        <Ww>
+          <count>6</count>
+          <WinNumber>1</WinNumber>
+          <ItemText>rx_buffer</ItemText>
+        </Ww>
       </WatchWindow1>
       <WatchWindow2>
         <Ww>
