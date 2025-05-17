@@ -1,0 +1,1 @@
+my_l151_motor\startup_stm32l151xc.o: startup_stm32l151xc.s

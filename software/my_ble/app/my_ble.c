@@ -261,11 +261,11 @@ void uarts_data_handler(ble_uarts_evt_t * p_evt)
         }		
                                 //Debug_LOG("*****len %d",p_evt->params.rx_data.length);
     }
-		//判断事件类型:发送就绪事件，该事件在后面的试验会用到，当前我们在该事件中翻转指示灯D4的状态，指示该事件的产生
-    if (p_evt->type == BLE_UARTS_EVT_TX_RDY)
-    {
-		nrf_gpio_pin_toggle(LED_4);
-	}
+//		//判断事件类型:发送就绪事件，该事件在后面的试验会用到，当前我们在该事件中翻转指示灯D4的状态，指示该事件的产生
+//    if (p_evt->type == BLE_UARTS_EVT_TX_RDY)
+//    {
+//		nrf_gpio_pin_toggle(LED_4);
+//	}
 }
 
 
@@ -711,8 +711,14 @@ void my_ble_disconnect(void)
 void ble_stack_init(void)
 {
     ret_code_t err_code;
+	
     //请求使能SoftDevice，该函数中会根据sdk_config.h文件中低频时钟的设置来配置低频时钟
     err_code = nrf_sdh_enable_request();
+	if (err_code != NRF_SUCCESS) {
+		NRF_LOG_INFO("SoftDevice enable failed with error: %d\r\n", err_code);
+		// 可以添加更多错误处理
+		return;
+	}
     APP_ERROR_CHECK(err_code);
     
     //定义保存应用程序RAM起始地址的变量
@@ -762,6 +768,27 @@ void my_ble_send(uint8_t* data, uint16_t len, uint16_t conn_handle)
 
 }
 
+/* 
+* 从机模式 发送单包数据  
+* data in m_send_data
+* data len is m_send_len
+*/
+void my_uart_ble_send(uint8_t* data, uint16_t len, uint16_t conn_handle)
+{
+	uint32_t err_code;
+	do
+	{
+		err_code = ble_uarts_data_send(&m_uarts, data, &len, conn_handle);
+		if ((err_code != NRF_ERROR_INVALID_STATE) &&
+				(err_code != NRF_ERROR_RESOURCES) &&
+				(err_code != NRF_ERROR_NOT_FOUND))
+		{
+				APP_ERROR_CHECK(err_code);
+		}
+	} while (err_code == NRF_ERROR_RESOURCES);
+	NRF_LOG_INFO("my ble send return : %d\r\n",err_code);
+
+}
 
 void my_ble_init(void)
 {

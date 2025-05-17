@@ -92,7 +92,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
 						NRF_LOG_INFO("[UART] REV MCU ID : %02x",data_array[3]);  
 						NRF_LOG_HEXDUMP_INFO(data_array,rece_len);
 //                        my_ble_recv_large_cc(data_array,rece_len);//解析MCU数据
-						my_ble_send(data_array,rece_len,m_conn_handle);
+						my_uart_ble_send(data_array,rece_len,m_conn_handle);
                         rece_flag = 0;
                         rece_len =0;
                         index = 0;
@@ -130,7 +130,7 @@ void uart_config(void)
 		CTS_PIN_NUMBER,//定义uart CTS引脚
 		APP_UART_FLOW_CONTROL_DISABLED,//关闭uart硬件流控
 		false,//禁止奇偶检验
-		NRF_UART_BAUDRATE_9600//uart波特率设置为115200bps
+		NRF_UART_BAUDRATE_115200//uart波特率设置为115200bps
 	};
 	//初始化串口，注册串口事件回调函数
 	APP_UART_FIFO_INIT(&comm_params,

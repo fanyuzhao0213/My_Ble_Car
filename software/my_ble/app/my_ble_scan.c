@@ -52,7 +52,7 @@ void scan_stop(void)
 static void scan_evt_handler(scan_evt_t const * p_scan_evt)
 {
 	//翻转LED指示灯D4的状态，指示扫描到设备
-	nrf_gpio_pin_toggle(LED_4);
+//	nrf_gpio_pin_toggle(LED_4);
 	// 提取公共字段（减少重复代码）
     const ble_gap_addr_t *peer_addr = &p_scan_evt->params.p_not_found->peer_addr;
     int8_t rssi = p_scan_evt->params.p_not_found->rssi;

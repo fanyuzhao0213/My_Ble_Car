@@ -149,11 +149,11 @@ int main(void)
 //	err_code = ble_dfu_buttonless_async_svci_init();
 //	APP_ERROR_CHECK(err_code);
 	
+	power_management_init();			//初始化电源管理
 	uart_config();						//初始化串口
 	timers_init();						//初始化APP定时器
 	my_flash_init();
 	leds_init();						//初始唤按键和指示灯
-	power_management_init();			//初始化电源管理
 	my_ble_init();						//协议栈以及GATT,GAP,广播等初始化
 	my_ble_mac_init();					//MAC地址初始化
     my_scan_init();	    				//初始化扫描
@@ -166,7 +166,7 @@ int main(void)
 //	nrf_gpio_cfg_output(13);	//led pin
 //	nrf_gpio_pin_write(13,1);
 
-	nrf_gpio_pin_write(LED_4,1);
+	nrf_gpio_pin_write(LED_4,0);
 //	fds_once_storage(WRITE_ID_CONFIG_INFO);
 	//主循环
 	while(true)
