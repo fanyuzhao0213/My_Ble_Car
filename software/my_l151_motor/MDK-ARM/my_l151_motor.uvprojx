@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32L151xC</Define>
               <Undefine></Undefine>
-              <IncludePath>../Core/Inc;../Drivers/STM32L1xx_HAL_Driver/Inc;../Drivers/STM32L1xx_HAL_Driver/Inc/Legacy;../Drivers/CMSIS/Device/ST/STM32L1xx/Include;../Drivers/CMSIS/Include;..\RTT;..\Motor</IncludePath>
+              <IncludePath>../Core/Inc; ../Drivers/STM32L1xx_HAL_Driver/Inc; ../Drivers/STM32L1xx_HAL_Driver/Inc/Legacy; ../Drivers/CMSIS/Device/ST/STM32L1xx/Include; ../Drivers/CMSIS/Include; ..\RTT; ..\Motor</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -392,6 +392,16 @@
         <Group>
           <GroupName>Application/User/Core</GroupName>
           <Files>
+            <File>
+              <FileName>motor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Motor\motor.c</FilePath>
+            </File>
+            <File>
+              <FileName>HC_SR04.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Motor\HC_SR04.c</FilePath>
+            </File>
             <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
@@ -477,16 +487,6 @@
               <FileName>stm32l1xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/stm32l1xx_hal_msp.c</FilePath>
-            </File>
-            <File>
-              <FileName>motor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Motor\motor.c</FilePath>
-            </File>
-            <File>
-              <FileName>HC_SR04.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Motor\HC_SR04.c</FilePath>
             </File>
           </Files>
         </Group>

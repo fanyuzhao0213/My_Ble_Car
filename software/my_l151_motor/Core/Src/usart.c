@@ -295,7 +295,7 @@ void control_protocol_analysis(uint8_t *data, uint8_t len)
 			/*判断数据有效性*/
 			if(data[4] <= 3)	//参数有效
 			{
-				g_MotorTurnDirection = MY_TURN_LEFT;		//左转弯
+				g_MotorTurnDirection = MY_TURN_RIGHT;		//左转弯
 				g_MotorTurnLevel = data[4];					//前进后退方向赋值
 				param_valid = 0;			
 			}
@@ -310,7 +310,7 @@ void control_protocol_analysis(uint8_t *data, uint8_t len)
 			/*判断数据有效性*/
 			if(data[4] <= 3)	//参数有效
 			{
-				g_MotorTurnDirection = MY_TURN_RIGHT;		//右转弯
+				g_MotorTurnDirection = MY_TURN_LEFT;		//右转弯
 				g_MotorTurnLevel = data[4];					//前进后退方向赋值
 				param_valid = 0;			
 			}

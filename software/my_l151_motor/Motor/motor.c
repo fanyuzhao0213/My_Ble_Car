@@ -30,13 +30,13 @@ void motor_gpio_set_direction(uint8_t motor_channel, uint8_t direction)
         case 2:
 			if(direction == MY_CAR_DIRECTION_FORWARD)
 			{
-				HAL_GPIO_WritePin(MOTOR_Direction2_GPIO_Port, MOTOR_Direction2_Pin,  GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(MOTOR_Direction2_GPIO_Port, MOTOR_Direction2_Pin,  GPIO_PIN_SET);
 			}else if(direction == MY_CAR_DIRECTION_BACKWARD)
 			{
-				HAL_GPIO_WritePin(MOTOR_Direction2_GPIO_Port, MOTOR_Direction2_Pin,  GPIO_PIN_SET);
+				HAL_GPIO_WritePin(MOTOR_Direction2_GPIO_Port, MOTOR_Direction2_Pin,  GPIO_PIN_RESET);
 			}else
 			{
-				HAL_GPIO_WritePin(MOTOR_Direction2_GPIO_Port, MOTOR_Direction2_Pin,  GPIO_PIN_RESET);
+				HAL_GPIO_WritePin(MOTOR_Direction2_GPIO_Port, MOTOR_Direction2_Pin,  GPIO_PIN_SET);
 			}
             break;
         case 3:
@@ -78,7 +78,7 @@ void motors_set_speed_soft(uint8_t target_speed_level,
     const uint16_t duty_table[] = {1000, 750, 500, 300, 100};	//速度等级值
     TIM_HandleTypeDef *htim = &htim2;
     uint32_t tim_channels[] = {
-        TIM_CHANNEL_1, TIM_CHANNEL_2,TIM_CHANNEL_3
+        TIM_CHANNEL_2, TIM_CHANNEL_3,TIM_CHANNEL_4
     };
     
     // 参数检查
@@ -237,9 +237,9 @@ void stop_all_motors_sync(uint16_t decel_time_ms)
     
     // 获取所有通道当前PWM值
     uint32_t pwm_values[3] = {
-        __HAL_TIM_GetCompare(htim, TIM_CHANNEL_1),
         __HAL_TIM_GetCompare(htim, TIM_CHANNEL_2),
         __HAL_TIM_GetCompare(htim, TIM_CHANNEL_3),
+        __HAL_TIM_GetCompare(htim, TIM_CHANNEL_4),
     };
     
     // 找出最大的PWM值作为基准
@@ -274,11 +274,11 @@ void stop_all_motors_sync(uint16_t decel_time_ms)
 				// 根据索引选择定时器通道
 				uint32_t channel;
 				if(i == 0) {
-					channel = TIM_CHANNEL_1;
-				} else if(i == 1) {
 					channel = TIM_CHANNEL_2;
-				} else {
+				} else if(i == 1) {
 					channel = TIM_CHANNEL_3;
+				} else {
+					channel = TIM_CHANNEL_4;
 				}
 				
 				// 设置新的PWM值
@@ -377,13 +377,15 @@ static uint16_t calculate_step_pwm(uint16_t current, uint16_t target, float rati
  */
 static uint8_t channel_to_index(uint32_t channel)
 {
+	uint8_t  returnchannel = 0;
     // TIM_CHANNEL_x 到 0-3 的映射
-    return (channel - TIM_CHANNEL_1); // 假设通道号是连续枚举值
+	returnchannel = channel - TIM_CHANNEL_1;// 假设通道号是连续枚举值
+    return returnchannel; 
 }
 
 /** 
  * @brief 带软启动的小车转弯控制（支持前进后退转弯）
- * @param turn_dir 转弯方向：0=左转，1=右转 
+ * @param turn_dir 转弯方向：1=左转，2=右转 
  * @param level 转弯强度等级：0=轻微，1=中等，2=急转 
  * @param accel_time_ms 加速时间(ms)，0=使用默认值(200ms) 
  */ 
@@ -405,44 +407,41 @@ void car_turn_soft(uint8_t turn_dir, uint8_t level, uint16_t accel_time_ms)
    
 	// 获取当前方向
 	uint8_t current_car_dir = (HAL_GPIO_ReadPin(MOTOR_Direction3_GPIO_Port, MOTOR_Direction3_Pin) == GPIO_PIN_SET) ? MY_CAR_DIRECTION_BACKWARD : MY_CAR_DIRECTION_FORWARD;
-		
+	
+	front = TIM_CHANNEL_4;			//前轮	
     // 确定内外侧轮子通道（保持当前运动方向）
     if(turn_dir == MY_TURN_LEFT) // 左转 
 	{ 
 		if(current_car_dir == MY_CAR_DIRECTION_FORWARD)
 		{
-			front = TIM_CHANNEL_3;			//前轮
-			inner_rear = TIM_CHANNEL_2;		//内侧后轮
-			outer_rear = TIM_CHANNEL_1;		//外侧后轮
+			inner_rear = TIM_CHANNEL_3;		//内侧后轮
+			outer_rear = TIM_CHANNEL_2;		//外侧后轮
 		}
 		else
 		{
-			front = TIM_CHANNEL_3;			//前轮
-			outer_rear = TIM_CHANNEL_1;		//内侧后轮
-			inner_rear = TIM_CHANNEL_2;		//外侧后轮
+			outer_rear = TIM_CHANNEL_2;		//内侧后轮
+			inner_rear = TIM_CHANNEL_3;		//外侧后轮
 		}
     } 
 	else 						// 右转 
 	{ 
 		if(current_car_dir == MY_CAR_DIRECTION_FORWARD)
 		{
-			front = TIM_CHANNEL_3;			//前轮
-			outer_rear = TIM_CHANNEL_2;		//左后轮
-			inner_rear = TIM_CHANNEL_1;		//右后轮
+			outer_rear = TIM_CHANNEL_3;		//左后轮
+			inner_rear = TIM_CHANNEL_2;		//右后轮
 		}
 		else
 		{
-			front = TIM_CHANNEL_3;			//前轮
-			outer_rear = TIM_CHANNEL_1;		//左后轮
-			inner_rear = TIM_CHANNEL_2;		//右后轮
+			outer_rear = TIM_CHANNEL_2;		//左后轮
+			inner_rear = TIM_CHANNEL_3;		//右后轮
 		}
     } 
     
     // 获取当前PWM值
     uint16_t current_pwm[4]; 
-    current_pwm[0] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_1); 
-    current_pwm[1] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_2); 
-    current_pwm[2] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_3); 
+    current_pwm[0] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_2); 
+    current_pwm[1] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_3); 
+    current_pwm[2] = __HAL_TIM_GetCompare(&htim2, TIM_CHANNEL_4); 
 
     // 计算目标值 
     uint16_t target_inner = speed_inner_table[level-1]; 
@@ -452,26 +451,27 @@ void car_turn_soft(uint8_t turn_dir, uint8_t level, uint16_t accel_time_ms)
     uint16_t steps = (accel_time_ms + STEP_TIME/2) / STEP_TIME; // 四舍五入 
     steps = (steps == 0) ? 1 : steps; // 确保至少1步 
 
-    // 软启动过程
-    for(uint16_t step = 0; step <= steps; step++) { 
-        float ratio = (float)step / steps; 
-        
-        // 前轮处理				//最大速度
-        uint16_t front_pwm = calculate_step_pwm(current_pwm[channel_to_index(front)], speed_outer, ratio); 
-		
-		
-		// 后外侧轮处理			//最大速度
-        uint16_t outer_rear_pwm  = calculate_step_pwm(current_pwm[channel_to_index(outer_rear)], speed_outer, ratio); 
-		// 后内测轮				//设置的速度级别
-        uint16_t inner_rear_pwm  = calculate_step_pwm(current_pwm[channel_to_index(inner_rear)], target_inner, ratio); 
+	uint16_t target_front = speed_outer;  // 前轮速度应该和外侧轮保持一致
 
-        // 设置PWM
-        __HAL_TIM_SetCompare(&htim2, front, front_pwm); 
-        __HAL_TIM_SetCompare(&htim2, outer_rear,  outer_rear_pwm); 
-        __HAL_TIM_SetCompare(&htim2, inner_rear, inner_rear_pwm); 
-        
-        HAL_Delay(STEP_TIME); 
-    } 
+	// 软启动过程
+	for(uint16_t step = 0; step <= steps; step++) {
+		float ratio = (float)step / steps;
+		
+		// 前轮处理 - 使用固定的外侧速度
+		uint16_t front_pwm = calculate_step_pwm(current_pwm[channel_to_index(front)], target_front, ratio);
+		
+		// 后外侧轮处理
+		uint16_t outer_rear_pwm = calculate_step_pwm(current_pwm[channel_to_index(outer_rear)], speed_outer, ratio);
+		// 后内侧轮处理
+		uint16_t inner_rear_pwm = calculate_step_pwm(current_pwm[channel_to_index(inner_rear)], target_inner, ratio);
+
+		// 设置PWM
+		__HAL_TIM_SetCompare(&htim2, front, front_pwm);
+		__HAL_TIM_SetCompare(&htim2, outer_rear, outer_rear_pwm);
+		__HAL_TIM_SetCompare(&htim2, inner_rear, inner_rear_pwm);
+		
+		HAL_Delay(STEP_TIME);
+	}
 
     // 最终状态强制同步
     __HAL_TIM_SetCompare(&htim2, front, speed_outer); 

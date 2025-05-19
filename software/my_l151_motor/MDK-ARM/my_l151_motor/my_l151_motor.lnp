@@ -1,5 +1,7 @@
 --cpu Cortex-M3
 "my_l151_motor\startup_stm32l151xc.o"
+"my_l151_motor\motor.o"
+"my_l151_motor\hc_sr04.o"
 "my_l151_motor\main.o"
 "my_l151_motor\gpio.o"
 "my_l151_motor\dma.o"
@@ -7,8 +9,6 @@
 "my_l151_motor\usart.o"
 "my_l151_motor\stm32l1xx_it.o"
 "my_l151_motor\stm32l1xx_hal_msp.o"
-"my_l151_motor\motor.o"
-"my_l151_motor\hc_sr04.o"
 "my_l151_motor\stm32l1xx_hal_tim.o"
 "my_l151_motor\stm32l1xx_hal_tim_ex.o"
 "my_l151_motor\stm32l1xx_hal.o"

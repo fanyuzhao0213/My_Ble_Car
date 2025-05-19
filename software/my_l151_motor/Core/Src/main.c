@@ -52,6 +52,7 @@ void print_array_hex(const uint8_t *array, uint16_t length, const char *name)
 {
     if (array == NULL || length == 0) {
         print_log("Invalid array parameters\r\n");
+		HAL_NVIC_SystemReset();
         return;
     }
     
@@ -168,6 +169,7 @@ int main(void)
 		my_motor_control_task();
 //		Ultrasonic_Task_Handler();				//≥¨…˘≤®≤‚¡ø«∞∫Ûæ‡¿Îtask
     /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
